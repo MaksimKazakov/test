@@ -1,10 +1,25 @@
 plugins {
     id 'java'
-    id 'io.qameta.allure' version '2.9.3'
+    id 'io.qameta.allure' version '2.12.0'
 }
 
 group 'ru.maximkazakov'
 version '1.0-SNAPSHOT'
+
+allure {
+    report{ //секция репорта
+        version.set("2.24.0")
+    }
+
+    adapter{ // отвечает за появление папки build/allure-result
+        aspectjWeaver.set(true) // обработка аннотации @Step
+        frameworks{
+            junit5{ // название фреймворка. Может быть разным Junit4, TestNgin
+                adapterVersion.set("2.24.0")
+            }
+        }
+    }
+}
 
 repositories {
     mavenCentral()
@@ -12,7 +27,7 @@ repositories {
 
 ext {
     allureVersion = '2.24.0'
-    junitVersion = '5.10.0'
+    junitVersion = '5.10.3'
 }
 
 sourceCompatibility = '17'
@@ -23,7 +38,7 @@ tasks.withType(JavaCompile) {
 }
 
 dependencies {
-    testImplementation('com.codeborne:selenide:6.19.1')
+    testImplementation('com.codeborne:selenide:7.4.0')
     testImplementation("io.qameta.allure:allure-selenide:${allureVersion}")
     testImplementation('org.slf4j:slf4j-simple:2.0.7')
 
@@ -33,12 +48,63 @@ dependencies {
 
 test {
     useJUnitPlatform()
-}
-allure {
-    autoconfigure = true
-    version = "${allureVersion}"
+    useJUnitPlatform{
+        systemProperties = [
+                'junit.jupiter.extensions.autodetection.enabled'            : 'true',
+                'junit.jupiter.testinstance.lifecycle.default'              : "per_class",
 
-    useJUnit5 {
-        version = "${allureVersion}"
+                /**
+                 * Настройки параллельного запуска:
+                 * @link https://junit.org/junit5/docs/snapshot/user-guide/#writing-tests-parallel-execution-config
+                 */
+                'junit.jupiter.execution.parallel.enabled'                  : false,
+                'junit.jupiter.execution.parallel.config.strategy'          : 'fixed',
+                //Количество потоков, работает только при настройке "junit.jupiter.execution.parallel.config.strategy": "fixed"
+                'junit.jupiter.execution.parallel.config.fixed.parallelism' : 1,
+                'junit.jupiter.execution.parallel.config.fixed.max-pool-size' : 1,
+                //Нагрузка на ядро, работает только при настройке "junit.jupiter.execution.parallel.config.strategy": "dynamic"
+                'junit.jupiter.execution.parallel.config.dynamic.factor'    : '1',
+                'junit.jupiter.execution.parallel.mode.default'             : 'same_thread',
+                'junit.jupiter.execution.parallel.mode.classes.default'     : 'concurrent',
+
+                /**
+                 * Наcтройки selenide
+                 * com.codeborne.selenide.Configuration http://178.253.43.140/
+                 */
+                "selenide.browser"                                      : "chrome",
+                "selenide.headless"                                     : "false",
+                "selenide.holdBrowserOpen"                              : "false",
+                //"selenide.remote"                                       : "http://82.202.163.193:4444/wd/hub",
+                "selenide.remote"                                       : "http://178.253.43.140:4444/wd/hub",
+                "selenide.browserSize"                                  : "1920x1080",
+                "selenide.timeout"                                      : "8000",
+                "selenide.pollingInterval"                              : "200",
+                "selenide.pageLoadTimeout"                              : "180000",
+                "selenide.reopenBrowserOnFail"                          : "true",
+                "selenide.remoteReadTimeout"                            : "180000",
+                "selenide.remoteConnectionTimeout"                      : "720000",
+                "selenide.clickViaJs"                                   : "false",
+                "selenide.screenshots"                                  : "true",
+                "selenide.savePageSource"                               : "true",
+
+                /**
+                 * Передаем флаги строкой, спецефичные настройки пока не поддерживаются
+                 */
+                "chrome.args"                                           : "--no-sandbox --disable-gpu"
+        ]
+
+        systemProperties System.properties
+
+//            def useTags = processIncludedTags()
+//
+//            if (!useTags.isEmpty()) {
+//                includeTags(useTags)
+//            } else {
+//                includeTags 'api'
+//            }
+//            }
+        //for check and debug
+//            project.logger.info('Use tags: ' + useTags)
+        project.logger.info('Include tags: ' + includeTags)
     }
 }
